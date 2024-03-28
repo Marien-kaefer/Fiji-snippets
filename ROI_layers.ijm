@@ -16,6 +16,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
 *
 */
 
+//close all open image, reset ROI manager, clear results
 run("Fresh Start");
 
 //get input parameters
@@ -24,7 +25,7 @@ run("Fresh Start");
 #@ File (label = "Tidied instance mask:", style = "open") inputMask
 #@ Integer(label="Number of layers per object to be created: " , value = 3) number_of_layers
 
-
+//open input files, read directory
 open(inputFile);
 title = getTitle(); 
 filename_without_extension = File.nameWithoutExtension;
@@ -33,73 +34,84 @@ open(inputMask);
 run("glasbey_on_dark");
 mask_title = getTitle(); 
 mask_filename_without_extension = File.nameWithoutExtension;
+scale_factors = newArray(number_of_layers); 
 
+//generate ROIs from instance mask
 selectWindow(mask_title); 
 run("LabelMap to ROI Manager (2D)");
-roiManager("Save", directory + File.separator + filename_without_extension + "_ROIs.zip"); 
-
 
 number_of_ROIs = roiManager("count");
 //print("Number of ROIs: " + number_of_ROIs); 
 
-number_of_layers = 4; 
+// rename ROIs to something sensible and save ROI set
+for (k=0; k < number_of_ROIs; k++){
+		roiManager("select", k);
+		roiManager("Rename", "Object_" + IJ.pad((k+1), 3));
+}
+roiManager("Save", directory + File.separator + filename_without_extension + "_ROIs.zip"); 
+
+// calculate scale factors from number of layers to be created
 scale_factors = newArray(number_of_layers); 
 for (i = 0; i < (number_of_layers); i++) {
 	scale_factors[i] = (number_of_layers - i) / number_of_layers ; 
 }
 //Array.print(scale_factors);
 
+
+// ------------------------- generate incrementally smaller ROI rings -------------------------
 for (k=0; k < number_of_ROIs; k++){
 	for (i = 1; i < (scale_factors.length) ; i++) {
 		roiManager("select", k);
 		//print("ROI index: " + k); 
 		//print("i: " + i);
-		roiManager("Rename", "Object_" + (k + 1) + "_0");
-		run("Scale... ", "x="+ scale_factors[i] + " y="+ scale_factors[i] + " centered");
+		roiManager("Rename", "Object_" + IJ.pad((k+1), 3) + "_0");
+	 	run("Scale... ", "x="+ scale_factors[i] + " y="+ scale_factors[i] + " centered");
 		roiManager("Add");	
 		roiManager("select", (roiManager("Count")-1));
-		roiManager("Rename", "Object_" + (k + 1) + "_" + i);
+		roiManager("Rename", "Object_" + IJ.pad((k+1), 3) + "_" + i);
 	}
 }
 
 for (k = 1; k < (number_of_ROIs + 1); k++) {
     for (i = 1; i < (scale_factors.length); i++) {
         if (i == 1) {
-            roi_ori = "Object_" + k + "_0";
+            roi_ori = "Object_" + IJ.pad((k), 3) + "_0";
             index_ori = RoiManager.getIndex(roi_ori);
-            roi_first = "Object_" + k + "_1";
+            roi_first = "Object_" + IJ.pad((k), 3) + "_1";
             index_first = RoiManager.getIndex(roi_first);
             roiManager("select", newArray(index_ori, index_first));
             roiManager("XOR");
             roiManager("Add");
             roiManager("select", (roiManager("Count") - 1));
-            roiManager("Rename", "Object_" + k + "_ring_" + i);
+            roiManager("Rename", "Object_" + IJ.pad((k), 3) + "_ring_" + i);
         } else {
-            roi_first = "Object_" + k + "_" + (i - 1);
+            roi_first = "Object_" + IJ.pad((k), 3) + "_" + (i - 1);
             index_first = RoiManager.getIndex(roi_first);
-            roi_second = "Object_" + k + "_" + i;
+            roi_second = "Object_" + IJ.pad((k), 3) + "_" + i;
             index_second = RoiManager.getIndex(roi_second);
             roiManager("select", newArray(index_first, index_second));
             roiManager("XOR");
             roiManager("Add");
             roiManager("select", (roiManager("Count") - 1));
-            roiManager("Rename", "Object_" + k + "_ring_" + i);
+            roiManager("Rename", "Object_" + IJ.pad((k), 3) + "_ring_" + i);
         }
     }
 
-    roi_centre = "Object_" + k + "_" + (scale_factors.length - 1);
+    roi_centre = "Object_" + IJ.pad((k), 3) + "_" + (scale_factors.length - 1);
     index_centre = RoiManager.getIndex(roi_centre);
     roiManager("select", index_centre);
-    roiManager("Rename", "Object_" + k + "_ring_" + scale_factors.length);
+    roiManager("Rename", "Object_" + IJ.pad((k), 3) + "_ring_" + scale_factors.length);
 
     for (i = 1; i < (scale_factors.length); i++) {
-        roi_name = "Object_" + k + "_" + (i - 1);
+        roi_name = "Object_" + IJ.pad((k), 3) + "_" + (i - 1);
         index_roi = RoiManager.getIndex(roi_name);
         roiManager("select", index_roi);
         roiManager("Delete");
     }
 }
+//save ROI set with layers
 roiManager("Save", directory + File.separator + filename_without_extension + "layered_ROI.zip"); 
 
 selectWindow(title); 
 roiManager("Show All");
+waitForUser("Done!");
