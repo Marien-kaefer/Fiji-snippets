@@ -110,7 +110,7 @@ for (k = 1; k < (number_of_ROIs + 1); k++) {
     }
 }
 //save ROI set with layers
-roiManager("Save", directory + File.separator + filename_without_extension + "layered_ROI.zip"); 
+roiManager("Save", directory + File.separator + filename_without_extension + "_layered_ROIs.zip"); 
 
 selectWindow(title); 
 roiManager("Show All");
