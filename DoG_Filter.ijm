@@ -1,3 +1,5 @@
+image_title = File.nameWithoutExtension;
+
 
 Dialog.create("Difference of Gaussian");
 Dialog.addMessage("Please specify your parameters.");
@@ -30,6 +32,7 @@ selectImage(large_sigma_ID);
 run("Gaussian Blur...", "sigma=" + large_sigma + "  stack");
 
 imageCalculator("Subtract create stack", "small-sigma","large-sigma");
+rename(image_title + "_DoG_filtered")
 
 selectImage(small_sigma_ID);
 close();
